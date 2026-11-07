@@ -36,6 +36,7 @@ jobs:
           if (!(Test-Path 'pawno/include.rar')) {
             throw 'pawno/include.rar not found. Check that the full Dubai RP project was uploaded.'
           }
+<<<<<<< HEAD
           # The RAR already contains a top-level "include/" folder.
           # Extract into pawno (not pawno/include) to avoid include/include nesting.
           & $env:SEVENZIP x 'pawno/include.rar' '-opawno' -y
@@ -45,6 +46,13 @@ jobs:
           if (!(Test-Path 'pawno/include/open.mp.inc')) {
             throw 'pawno/include/open.mp.inc is missing after extraction.'
           }
+=======
+          New-Item -ItemType Directory -Force -Path 'pawno/include' | Out-Null
+          & $env:SEVENZIP x 'pawno/include.rar' '-opawno/include' -y
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not extract pawno/include.rar (exit code $LASTEXITCODE)."
+          }
+>>>>>>> 83ecf2cb8868a927311c5aa980e14797247a6f33
 
       - name: Compile Dubai-V2 gamemode
         shell: pwsh
