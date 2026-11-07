@@ -1,0 +1,14 @@
+NOMAD RP — Android APK сборка через GitHub Actions
+
+Здесь Flutter SDK/Android SDK не установлены, поэтому APK не скомпилирован локально.
+В проект добавлен workflow: .github/workflows/android-apk.yml
+
+Как получить APK:
+1) Создай репозиторий на github.com и загрузи туда содержимое этого архива.
+2) Открой репозиторий → вкладка Actions.
+3) Выбери “Build NOMAD RP Android APK” → Run workflow.
+4) Дождись зеленого завершения workflow.
+5) В странице запуска снизу в Artifacts скачай “NOMAD-RP-Launcher-APK”.
+6) Распакуй ZIP artifact — внутри app-release.apk.
+
+Важно: это тестовый APK лаунчера/UI-проекта, не полноценный SA-MP клиент и не подключенный live-сервер.

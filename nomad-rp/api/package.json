@@ -1,0 +1,19 @@
+{
+  "name": "nomad-rp-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NOMAD RP API scaffold",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.12.0"
+  }
+}
