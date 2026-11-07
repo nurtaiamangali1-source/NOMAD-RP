@@ -23,21 +23,21 @@ jobs:
           cache: true
 
       - name: Generate Android platform files
-        working-directory: launcher
+        working-directory: nomad-rp/launcher
         run: flutter create . --platforms=android
 
       - name: Resolve dependencies
-        working-directory: launcher
+        working-directory: nomad-rp/launcher
         run: flutter pub get
 
       - name: Build release APK
-        working-directory: launcher
+        working-directory: nomad-rp/launcher
         run: flutter build apk --release
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: NOMAD-RP-Launcher-APK
-          path: launcher/build/app/outputs/flutter-apk/app-release.apk
+          path: nomad-rp/launcher/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14
