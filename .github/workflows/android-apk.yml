@@ -1,0 +1,43 @@
+
+name: Build NOMAD RP Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'launcher/**'
+      - '.github/workflows/android-apk.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate Android platform files
+        working-directory: launcher
+        run: flutter create . --platforms=android
+
+      - name: Resolve dependencies
+        working-directory: launcher
+        run: flutter pub get
+
+      - name: Build release APK
+        working-directory: launcher
+        run: flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOMAD-RP-Launcher-APK
+          path: launcher/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
