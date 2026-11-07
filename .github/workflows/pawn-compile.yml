@@ -3,7 +3,9 @@ name: NOMAD RP - Dubai Pawn Compile Check
 on:
   workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
     paths:
       - 'server-dubai/**'
       - '.github/workflows/pawn-compile.yml'
@@ -21,38 +23,53 @@ jobs:
       - name: Locate 7-Zip
         shell: pwsh
         run: |
-          $sevenZip = @(
-            'C:\Program Files\7-Zip\7z.exe',
-            'C:\Program Files (x86)\7-Zip\7z.exe'
-          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          $candidates = @(
+            "$env:ProgramFiles\7-Zip\7z.exe",
+            "${env:ProgramFiles(x86)}\7-Zip\7z.exe"
+          )
+          $sevenZip = $candidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
           if (-not $sevenZip) {
-            throw '7-Zip was not found on the Windows runner.'
+            $command = Get-Command 7z.exe -ErrorAction SilentlyContinue
+            if ($command) { $sevenZip = $command.Source }
           }
-          "SEVENZIP=$sevenZip" >> $env:GITHUB_ENV
+          if (-not $sevenZip) {
+            choco install 7zip.install --no-progress -y
+            $candidates = @(
+              "$env:ProgramFiles\7-Zip\7z.exe",
+              "${env:ProgramFiles(x86)}\7-Zip\7z.exe"
+            )
+            $sevenZip = $candidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+          }
+          if (-not $sevenZip) {
+            throw '7-Zip could not be located or installed.'
+          }
+          "SEVENZIP=$sevenZip" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Extract Pawn include archive
         shell: pwsh
         run: |
-          if (!(Test-Path 'pawno/include.rar')) {
-            throw 'pawno/include.rar not found. Check that the full Dubai RP project was uploaded.'
+          $archive = 'pawno/include.rar'
+          if (!(Test-Path $archive)) {
+            throw 'pawno/include.rar not found. Confirm the complete Dubai RP project is in server-dubai.'
           }
-<<<<<<< HEAD
-          # The RAR already contains a top-level "include/" folder.
-          # Extract into pawno (not pawno/include) to avoid include/include nesting.
-          & $env:SEVENZIP x 'pawno/include.rar' '-opawno' -y
+          $extractRoot = 'pawno/_include_extract'
+          if (Test-Path $extractRoot) { Remove-Item $extractRoot -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path $extractRoot | Out-Null
+          & $env:SEVENZIP x $archive "-o$extractRoot" -y
           if ($LASTEXITCODE -ne 0) {
             throw "Could not extract pawno/include.rar (exit code $LASTEXITCODE)."
           }
+          $openMpFile = Get-ChildItem -Path $extractRoot -Filter 'open.mp.inc' -File -Recurse | Select-Object -First 1
+          if (-not $openMpFile) {
+            throw 'open.mp.inc was not found inside pawno/include.rar.'
+          }
+          $includeSource = $openMpFile.Directory.FullName
+          New-Item -ItemType Directory -Force -Path 'pawno/include' | Out-Null
+          Copy-Item -Path (Join-Path $includeSource '*') -Destination 'pawno/include' -Recurse -Force
           if (!(Test-Path 'pawno/include/open.mp.inc')) {
             throw 'pawno/include/open.mp.inc is missing after extraction.'
           }
-=======
-          New-Item -ItemType Directory -Force -Path 'pawno/include' | Out-Null
-          & $env:SEVENZIP x 'pawno/include.rar' '-opawno/include' -y
-          if ($LASTEXITCODE -ne 0) {
-            throw "Could not extract pawno/include.rar (exit code $LASTEXITCODE)."
-          }
->>>>>>> 83ecf2cb8868a927311c5aa980e14797247a6f33
+          Remove-Item $extractRoot -Recurse -Force
 
       - name: Compile Dubai-V2 gamemode
         shell: pwsh
@@ -66,7 +83,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "Pawn compilation failed with exit code $LASTEXITCODE. See compiler output above."
           }
-          if (!(Test-Path $output)) { throw 'Compiler finished but the AMX output file was not created.' }
+          if (!(Test-Path $output)) {
+            throw 'Compiler finished but the AMX output file was not created.'
+          }
 
       - name: Upload compiled AMX artifact
         uses: actions/upload-artifact@v4
