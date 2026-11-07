@@ -1,0 +1,69 @@
+name: NOMAD RP - Dubai Pawn Compile Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'server-dubai/**'
+      - '.github/workflows/pawn-compile.yml'
+
+jobs:
+  compile:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: server-dubai
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Locate 7-Zip
+        shell: pwsh
+        run: |
+          $sevenZip = @(
+            'C:\Program Files\7-Zip\7z.exe',
+            'C:\Program Files (x86)\7-Zip\7z.exe'
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $sevenZip) {
+            throw '7-Zip was not found on the Windows runner.'
+          }
+          "SEVENZIP=$sevenZip" >> $env:GITHUB_ENV
+
+      - name: Extract Pawn include archive
+        shell: pwsh
+        run: |
+          if (!(Test-Path 'pawno/include.rar')) {
+            throw 'pawno/include.rar not found. Check that the full Dubai RP project was uploaded.'
+          }
+          # The RAR already contains a top-level "include/" folder.
+          # Extract into pawno (not pawno/include) to avoid include/include nesting.
+          & $env:SEVENZIP x 'pawno/include.rar' '-opawno' -y
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not extract pawno/include.rar (exit code $LASTEXITCODE)."
+          }
+          if (!(Test-Path 'pawno/include/open.mp.inc')) {
+            throw 'pawno/include/open.mp.inc is missing after extraction.'
+          }
+
+      - name: Compile Dubai-V2 gamemode
+        shell: pwsh
+        run: |
+          $compiler = 'pawno/pawncc.exe'
+          $source = 'gamemodes/Dubai-V2.pwn'
+          $output = 'gamemodes/Dubai-V2.amx'
+          if (!(Test-Path $compiler)) { throw 'pawno/pawncc.exe not found.' }
+          if (!(Test-Path $source)) { throw 'gamemodes/Dubai-V2.pwn not found.' }
+          & $compiler $source '-ipawno/include' '-igamemodes' "-o$output"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Pawn compilation failed with exit code $LASTEXITCODE. See compiler output above."
+          }
+          if (!(Test-Path $output)) { throw 'Compiler finished but the AMX output file was not created.' }
+
+      - name: Upload compiled AMX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NOMAD-Dubai-RP-AMX
+          path: server-dubai/gamemodes/Dubai-V2.amx
+          if-no-files-found: error
+          retention-days: 7
